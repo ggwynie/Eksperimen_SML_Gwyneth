@@ -1,0 +1,47 @@
+name: Automated Data Preprocessing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "namadataset_raw/**"
+      - "preprocessing/automate_Gwyneth.py"
+  workflow_dispatch: {}
+
+jobs:
+  preprocess:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.7"
+
+      - name: Install dependencies
+        run: pip install pandas==2.3.3 numpy==2.4.4 scikit-learn==1.8.0
+
+      - name: Run automated preprocessing
+        working-directory: preprocessing
+        run: |
+          python automate_Gwyneth.py \
+            --input ../namadataset_raw/titanic_raw.csv \
+            --output namadataset_preprocessing/titanic_preprocessed.csv
+
+      - name: Commit processed dataset back to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add preprocessing/namadataset_preprocessing/titanic_preprocessed.csv
+          git diff --staged --quiet || git commit -m "chore: auto-update preprocessed dataset [skip ci]"
+          git push
+
+      - name: Upload processed dataset as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: preprocessed-dataset-${{ github.run_number }}
+          path: preprocessing/namadataset_preprocessing/titanic_preprocessed.csv
+          retention-days: 30
